@@ -5,16 +5,42 @@ from world import World
 import random
 from ast import literal_eval
 
+class Queue():
+    def __init__(self):
+        self.queue = []
+    def enqueue(self, value):
+        self.queue.append(value)
+    def dequeue(self):
+        if self.size() > 0:
+            return self.queue.pop(0)
+        else:
+            return None
+    def size(self):
+        return len(self.queue)
+
+class Stack():
+    def __init__(self):
+        self.stack = []
+    def push(self, value):
+        self.stack.append(value)
+    def pop(self):
+        if self.size() > 0:
+            return self.stack.pop()
+        else:
+            return None
+    def size(self):
+        return len(self.stack)
+
 # Load world
 world = World()
 
 
 # You may uncomment the smaller graphs for development and testing purposes.
-# map_file = "maps/test_line.txt"
+map_file = "maps/test_line.txt"
 # map_file = "maps/test_cross.txt"
 # map_file = "maps/test_loop.txt"
 # map_file = "maps/test_loop_fork.txt"
-map_file = "maps/main_maze.txt"
+# map_file = "maps/main_maze.txt"
 
 # Loads the map into a dictionary
 room_graph=literal_eval(open(map_file, "r").read())
@@ -28,6 +54,60 @@ player = Player(world.starting_room)
 # Fill this out with directions to walk
 # traversal_path = ['n', 'n']
 traversal_path = []
+
+class TraversalGraph:
+    def __init__(self):
+        self.trav_graph = {
+            0: {},
+        }
+    def add_room(self, room_id):
+        if room_id not in self.trav_graph:
+            self.trav_graph[room_id] = {}
+
+    def add_edge(self, dir, new_room):
+        # player.current_room.connect_rooms(dir, new_room)
+        pass
+        
+    def get_neighbors(self):
+        neighbors = []
+        exit_dir = player.current_room.get_exits()
+        print(exit_dir)
+        for one_dir in exit_dir:
+            room_to_add = player.current_room.get_room_in_direction(one_dir)
+            neighbors.append(room_to_add.id)
+            # print(f'New room to the {one_dir} is: {room_to_add.id}')
+            self.trav_graph[player.current_room.id][one_dir] = room_to_add.id
+            self.add_room(room_to_add.id)
+            # self.add_edge(room_to_add.id, one_dir)
+            print(f'New trav_graph: {self.trav_graph}')
+            return neighbors
+
+    def bft(self):
+        pass
+    def dft(self, start_room):
+        dft_stack = Stack()
+        dft_stack.push(start_room)
+
+        visited = set()
+
+        while dft_stack.size() > 0:
+            current = dft_stack.pop()
+
+            if current not in visited:
+                print(current)
+                visited.add(current)
+                for neighbors in self.get_neighbors():
+                    dft_stack.push(neighbors)
+
+
+
+
+graph = TraversalGraph()
+# print(graph.get_neighbors())
+print(graph.dft(player.current_room.id))
+
+
+
 
 
 
@@ -51,12 +131,12 @@ else:
 #######
 # UNCOMMENT TO WALK AROUND
 #######
-player.current_room.print_room_description(player)
-while True:
-    cmds = input("-> ").lower().split(" ")
-    if cmds[0] in ["n", "s", "e", "w"]:
-        player.travel(cmds[0], True)
-    elif cmds[0] == "q":
-        break
-    else:
-        print("I did not understand that command.")
+# player.current_room.print_room_description(player)
+# while True:
+#     cmds = input("-> ").lower().split(" ")
+#     if cmds[0] in ["n", "s", "e", "w"]:
+#         player.travel(cmds[0], True)
+#     elif cmds[0] == "q":
+#         break
+#     else:
+#         print("I did not understand that command.")
