@@ -60,14 +60,31 @@ class TraversalGraph:
         self.trav_graph = {
             0: {},
         }
+        self.avail_rooms = {
+            0: {},
+        }
+        self.my_route = []
+
     def add_room(self, room_id):
-        if room_id not in self.trav_graph:
-            self.trav_graph[room_id] = {}
+        if room_id not in self.avail_rooms:
+            self.avail_rooms[room_id] = {}
 
     def add_edge(self, dir, new_room):
-        self.trav_graph[player.current_room.id][new_room] = dir
-        
-    def get_neighbors(self, current_room=player.current_room.id):
+        self.avail_rooms[player.current_room.id][new_room] = dir
+
+    def go_back(self, route):
+        while '?' not in self.trav_graph[route[-1]].values():
+            reverse_dict = {value : key for (key, value) in self.avail_rooms[route[-1]].items()}
+            # print(f'Reverse dict for going back: {reverse_dict}')
+            route.pop(-1)
+            # print(f'This is the direction to take: {reverse_dict[route[-1]]}')
+            player.travel(reverse_dict[route[-1]])
+            traversal_path.append(reverse_dict[route[-1]])
+            # print(f'After moving backwards, in: {player.current_room.name}')
+        return None 
+
+    def get_neighbors(self, current_room):
+        # print(f'Current Room from Get Neighbors function: {current_room}')
         neighbors = []
         exit_dir = player.current_room.get_exits()
         # print(f'Possible Exits from {player.current_room.name}: {exit_dir}')
@@ -78,39 +95,45 @@ class TraversalGraph:
                 # print(self.trav_graph[player.current_room.id])
             room_to_add = player.current_room.get_room_in_direction(exit_dir[i]).id
             neighbors.append(room_to_add)
-            # print(f'New room to the {one_dir} is: {room_to_add.id}')
+            # print(f'New room to the {exit_dir[i]} is: {room_to_add}')
             self.add_room(room_to_add)
             self.add_edge(room_to_add, exit_dir[i])
-        # print(f'New trav_graph: {self.trav_graph}')
+            if room_to_add not in self.trav_graph:
+                self.trav_graph[room_to_add] = {}
+
+        # print(f'trav_graph: {self.trav_graph}')
+        # print(f'Available rooms: {self.avail_rooms}')
         # print(f'Neighbors: {neighbors}')
         return neighbors
 
-    def bfs(self, start_room, destination):
+    # def bfs(self, start_room, destination):
         # CURRENTLY CAN'T FIND PATH UNLESS THERE IS ONLY ONE STEP NEEDED, OTHERWISE INFINITE LOOP
         # IS ONLY GETTING NEIGHBORS OF ORIGIN ROOM
-        queue = Queue()
-        queue.enqueue([start_room])
+        # queue = Queue()
+        # queue.enqueue([start_room])
 
-        visited = set()
+        # visited = set()
 
-        while queue.size() > 0:
-            current_path = queue.dequeue()
-            current_vertex = current_path[-1]
+        # while queue.size() > 0:
+        #     current_path = queue.dequeue()
+        #     current_vertex = current_path[-1]
 
-            if current_vertex not in visited:
-                if current_vertex == destination:
-                    print(f'Successful Path: {current_path}')
-                    return current_path
-                visited.add(current_vertex)
-            for neighbor in self.get_neighbors(current_vertex):
-                new_path = list(current_path)
-                new_path.append(neighbor)
-                print(f'New Path: {new_path}')
-                queue.enqueue(new_path)
+        #     if current_vertex not in visited:
+        #         if current_vertex == destination:
+        #             print(f'Successful Path: {current_path}')
+        #             return current_path
+        #         visited.add(current_vertex)
+        #     for neighbor in self.get_neighbors(current_vertex):
+        #         new_path = list(current_path)
+        #         new_path.append(neighbor)
+        #         print(f'New Path: {new_path}')
+        #         queue.enqueue(new_path)
 
     def dft(self, start_room):
         dft_stack = Stack()
         dft_stack.push(start_room)
+
+        self.my_route.append(player.current_room.id)
 
         visited = set()
 
@@ -118,45 +141,57 @@ class TraversalGraph:
             next_neighbor = dft_stack.pop()
 
             if next_neighbor not in visited:
-                # if player.current_room exits do not lead to next neighbor (off the stack), bfs
-                # for exit in player.current_room.get_exits():
-                #     if player.current_room.get_room_in_direction(exit) is not next_neighbor:
-                #         self.bfs(player.current_room.id, next_neighbor)
                 
                 start_room = player.current_room
                 print(f'Start room: {start_room.name}')
                 print(f'Current room to travel to: {next_neighbor}')
                 visited.add(next_neighbor)
-                reverse_dict = {value : key for (key, value) in self.trav_graph[start_room.id].items()}
+                reverse_dict = {value : key for (key, value) in self.avail_rooms[start_room.id].items()}
                 moving_dir = reverse_dict.get(next_neighbor)
+                print(f'Direction to Move: {moving_dir}')
 
+                # if moving_dir is None:
+                #     self.go_back(self.my_route)
+    
                 before_travel = player.current_room.id
-                player.travel(moving_dir)
-                after_travel = player.current_room.id
+                if moving_dir is not None:
+                    self.trav_graph[before_travel][moving_dir] = next_neighbor
+                    player.travel(moving_dir)
+                    self.my_route.append(player.current_room.id)
+                    print(f'New neighbors after travel: {self.get_neighbors(player.current_room)}')
+                    
+                    after_travel = player.current_room.id
+                    print(f'Current Room after last move: {after_travel}')
 
-                if before_travel is not after_travel:
-                    traversal_path.append(moving_dir)
+                    if before_travel is not after_travel:
+                        traversal_path.append(moving_dir)
 
-                if moving_dir == "n":
-                    self.trav_graph[player.current_room.id]["s"] = start_room
-                elif moving_dir == "s":
-                    self.trav_graph[player.current_room.id]["n"] = start_room
-                elif moving_dir == "e":
-                    self.trav_graph[player.current_room.id]["w"] = start_room
-                elif moving_dir == "w":
-                    self.trav_graph[player.current_room.id]["e"] = start_room
+                    if moving_dir == "n":
+                        self.trav_graph[player.current_room.id]["s"] = start_room.id
+                    elif moving_dir == "s":
+                        self.trav_graph[player.current_room.id]["n"] = start_room.id
+                    elif moving_dir == "e":
+                        self.trav_graph[player.current_room.id]["w"] = start_room.id
+                    elif moving_dir == "w":
+                        self.trav_graph[player.current_room.id]["e"] = start_room.id
 
-                print(f'Traversal Path: {traversal_path}')
+                    print(f'Traversal Path: {traversal_path}')
+                    # print(f'Available Rooms: {self.avail_rooms}')
+                    print(f'My route so far: {self.my_route}')
 
-                for neighbors in self.get_neighbors():
+                for neighbors in self.get_neighbors(player.current_room):
                     dft_stack.push(neighbors)
             
 
 
 
 graph = TraversalGraph()
-# print(graph.get_neighbors())
-# print(graph.dft(player.current_room.id))
+print(graph.dft(player.current_room.id))
+# print(graph.go_back(graph.my_route))
+# print(f'Neighbors after DFT: {graph.get_neighbors(player.current_room)}')
+# print(type(player.current_room.id))
+
+# print(graph.get_neighbors(0))
 # print(graph.bfs(0, 8))
 
 
